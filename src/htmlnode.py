@@ -10,7 +10,7 @@ class HTMLNode():
     
     def props_to_html(self):
         if self.props is None:
-            return None
+            return ""
 
         string_props = ""
         for key, value in self.props.items():
@@ -31,9 +31,7 @@ class LeafNode(HTMLNode):
         if self.tag is None:
             return self.value
         
-        tag_string = f"<{self.tag}>"
-        if self.props is not None:
-            tag_string = f"<{self.tag}{self.props_to_html()}>"
+        tag_string = f"<{self.tag}{self.props_to_html()}>"
         html_string = tag_string+f"{self.value}</{self.tag}>"
 
         return html_string
@@ -41,3 +39,21 @@ class LeafNode(HTMLNode):
     def __repr__(self):
         return f"Tag: {self.tag}\nValue: {self.value}\nProps: {self.props}"
 
+class ParentNode(HTMLNode):
+    def __init__(self,tag, children, props = None):
+        super().__init__(tag,None,children,props)
+
+    def to_html(self):
+        if self.tag is None:
+            raise ValueError("invalid HTML: no tag")
+        if self.children is None:
+            raise ValueError("invalid HTML: no children")
+        
+        tag_string = f"<{self.tag}{self.props_to_html()}>"
+
+        html_string = tag_string
+        for child in self.children:
+            html_string += child.to_html()
+        html_string += f"</{self.tag}>"
+
+        return html_string
