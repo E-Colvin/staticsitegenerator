@@ -1,7 +1,32 @@
 import unittest
 
 from textnode import TextNode, TextType
-from markdown import split_nodes_delimiter
+from markdown import split_nodes_delimiter, extract_markdown_images, extract_markdown_links
+
+class TestMarkdownImages(unittest.TestCase):
+    def test_extract_markdown_images(self):
+        matches = extract_markdown_images(
+            "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png) and another ![image 2](https://i.imgur.com/img2.png)"
+        )
+        self.assertListEqual([("image", "https://i.imgur.com/zjjcJKZ.png"),("image 2","https://i.imgur.com/img2.png")], matches)
+
+    def test_no_alt_text(self):
+        matches = extract_markdown_images("None image part ![](https://i.imgur.com/zfafdsa.jpg)")
+
+        self.assertListEqual([("","https://i.imgur.com/zfafdsa.jpg")],matches)
+
+class TestMarkdownLinks(unittest.TestCase):
+    def test_extract_markdown_links(self):
+        matches = extract_markdown_links(
+            "Some text with a [link](boot.dev)"
+        )
+
+        self.assertListEqual([("link","boot.dev")],matches)
+
+    def test_multiple_links(self):
+        text = "This is text with a link [to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/@bootdotdev)"
+        matches = extract_markdown_links(text)
+        self.assertListEqual([("to boot dev", "https://www.boot.dev"), ("to youtube", "https://www.youtube.com/@bootdotdev")],matches)
 
 class TestMarkdownDelimiter(unittest.TestCase):
     def test_code_delimiter(self):
@@ -14,7 +39,7 @@ class TestMarkdownDelimiter(unittest.TestCase):
             TextNode(" word", TextType.TEXT),
         ]
 
-        self.assertEqual(new_nodes,expected_nodes)
+        self.assertListEqual(new_nodes,expected_nodes)
 
     def test_bold_delimiter(self):
         node = TextNode("This is text with a **code block** word", TextType.TEXT)
@@ -26,7 +51,7 @@ class TestMarkdownDelimiter(unittest.TestCase):
             TextNode(" word", TextType.TEXT),
         ]
 
-        self.assertEqual(new_nodes,expected_nodes)
+        self.assertListEqual(new_nodes,expected_nodes)
     
     def test_multiple_bold_delimiter(self):
         node = TextNode("**This** is `text` with a **code block** word", TextType.TEXT)
@@ -39,7 +64,7 @@ class TestMarkdownDelimiter(unittest.TestCase):
             TextNode(" word", TextType.TEXT),
         ]
 
-        self.assertEqual(new_nodes,expected_nodes)
+        self.assertListEqual(new_nodes,expected_nodes)
 
     def test_italics_delimiter(self):
         node = TextNode("_This is text with a code block word_", TextType.TEXT)
@@ -49,7 +74,7 @@ class TestMarkdownDelimiter(unittest.TestCase):
             TextNode("This is text with a code block word", TextType.ITALIC)
         ]
 
-        self.assertEqual(new_nodes,expected_nodes)
+        self.assertListEqual(new_nodes,expected_nodes)
 
     def test_multiple_nodes(self):
         node1 = TextNode("This is text with a **code block** word", TextType.TEXT)
@@ -66,7 +91,7 @@ class TestMarkdownDelimiter(unittest.TestCase):
             TextNode(" word", TextType.TEXT),
         ]
 
-        self.assertEqual(new_nodes,expected_nodes)
+        self.assertListEqual(new_nodes,expected_nodes)
 
     def test_nested_calls(self):
         node = TextNode("**This** is `text` with a **code block** word", TextType.TEXT)
@@ -76,11 +101,12 @@ class TestMarkdownDelimiter(unittest.TestCase):
         expected_nodes = [
             TextNode("This",TextType.BOLD),
             TextNode(" is ",TextType.TEXT),
-            TextNode("text",TextType.TEXT),
+            TextNode("text",TextType.CODE),
             TextNode(" with a ", TextType.TEXT),
             TextNode("code block", TextType.BOLD),
             TextNode(" word", TextType.TEXT),
         ]
+        self.assertListEqual(new_nodes,expected_nodes)
     
     def test_delim_bold(self):
         node = TextNode("This is text with a **bolded** word", TextType.TEXT)
