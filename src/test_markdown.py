@@ -1,9 +1,97 @@
 import unittest
 
 from textnode import TextNode, TextType
-from markdown import split_nodes_delimiter, extract_markdown_images, extract_markdown_links,split_nodes_image,split_nodes_link,text_to_textnode,markdown_to_blocks
+from markdown import *
 
 class TestMarkdownBlocks(unittest.TestCase):
+        def test_block_to_block_types(self):
+            block = "# heading"
+            self.assertEqual(block_to_blocktype(block), BlockType.HEADING)
+            block = "```\ncode\n```"
+            self.assertEqual(block_to_blocktype(block), BlockType.CODE)
+            block = "> quote\n> more quote"
+            self.assertEqual(block_to_blocktype(block), BlockType.QUOTE)
+            block = "- list\n- items"
+            self.assertEqual(block_to_blocktype(block), BlockType.UNORDERED_LIST)
+            block = "1. list\n2. items"
+            self.assertEqual(block_to_blocktype(block), BlockType.ORDERED_LIST)
+            block = "paragraph"
+            self.assertEqual(block_to_blocktype(block), BlockType.PARAGRAPH)
+
+        def test_md_to_blocks_and_block_to_block_type(self):
+            md = """
+# A heading
+
+###### another heading
+
+####### an invalid heading
+
+```
+ some code ```
+
+> a quote
+
+- item a
+- item b
+- item c
+
+1. item 1
+2. item 2
+3. item 3
+
+1. item 1
+4. item 2
+3. item 3
+
+"""
+            blocks = markdown_to_blocks(md)
+            block_types = []
+            for block in blocks:
+                block_types.append(block_to_blocktype(block))
+            expected_types = [BlockType.HEADING,BlockType.HEADING,BlockType.PARAGRAPH,BlockType.CODE,BlockType.QUOTE,BlockType.UNORDERED_LIST,BlockType.ORDERED_LIST,BlockType.PARAGRAPH]
+            self.assertListEqual(block_types,expected_types)
+
+
+        def test_block_to_blocktype_paragraph(self):
+            md = """item A item B"""
+            self.assertEqual(block_to_blocktype(md),BlockType.PARAGRAPH)
+
+        def test_block_to_blocktype_ordered_list(self):
+            md = """1. item A
+2. item B"""
+            self.assertEqual(block_to_blocktype(md),BlockType.ORDERED_LIST)
+
+        def test_block_to_blocktype_unordered_list(self):
+            md = """- item A
+- item B"""
+            self.assertEqual(block_to_blocktype(md),BlockType.UNORDERED_LIST)
+
+        def test_block_to_blocktype_quote(self):
+            md = "> This should be a quote"
+            self.assertEqual(block_to_blocktype(md),BlockType.QUOTE)
+
+        def test_block_to_blocktype_code(self):
+            md = """```
+Some code```"""
+            self.assertEqual(block_to_blocktype(md),BlockType.CODE)
+
+        def test_block_to_blocktype_headers(self):
+            md = ("""
+# A heading
+
+###### another heading
+
+####### an invalid heading
+
+
+""")
+            blocks = markdown_to_blocks(md)
+            block_types = []
+            for block in blocks:
+                block_types.append(block_to_blocktype(block))
+            self.assertListEqual(block_types,[BlockType.HEADING,BlockType.HEADING,BlockType.PARAGRAPH])
+
+
         def test_markdown_to_blocks(self):
             md = ("""
 This is **bolded** paragraph

@@ -1,4 +1,5 @@
 from textnode import TextNode, TextType
+from enum import Enum
 import re
 
 def markdown_to_blocks(markdown):
@@ -6,11 +7,74 @@ def markdown_to_blocks(markdown):
     temp_blocks = markdown.split("\n\n")
 
     for text in temp_blocks:
-        if text == "":
+        if text == "" or text == "\n":
             continue
         blocks.append(text.strip())
 
     return blocks
+
+class BlockType(Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    CODE = "code"
+    QUOTE = "quote"
+    UNORDERED_LIST = "unordered list"
+    ORDERED_LIST = "ordered list"
+
+def block_to_blocktype(markdown):
+    is_header = check_if_header(markdown)
+    is_multi_code = check_if_multi_code(markdown)
+    is_quote = markdown[:1] == ">"
+    is_unordered_list = check_if_unordered_list(markdown)
+    is_ordered_list = check_if_ordered_list(markdown)
+    is_paragraph = not (is_header or is_multi_code or is_quote or is_unordered_list or is_ordered_list)
+    if is_header:
+        return BlockType.HEADING
+    elif is_multi_code:
+        return BlockType.CODE
+    elif is_quote:
+        return BlockType.QUOTE
+    elif is_unordered_list:
+        return BlockType.UNORDERED_LIST
+    elif is_ordered_list:
+        return BlockType.ORDERED_LIST
+    else:
+        return BlockType.PARAGRAPH
+
+def check_if_header(markdown):
+    hashtag_count = 0
+    for index in range(len(markdown)):
+        char = markdown[index]
+        if char != "#" or hashtag_count >= 6:
+           break
+        hashtag_count += 1
+
+    if hashtag_count > 0 and  markdown[index] == " ":
+        return True
+    
+    return False
+
+def check_if_multi_code(markdown):
+    prefix  = "```\n"
+    suffix = "```"
+    return markdown[:4] == prefix and markdown[-3:] == suffix
+
+def check_if_unordered_list(markdown):
+    split_text = markdown.split("\n")
+    for line in split_text:
+        if line[:2] != "- ":
+            return False
+    return True
+
+def check_if_ordered_list(markdown):
+    current_num = 1
+    split_text = markdown.split("\n")
+    for line in split_text:
+        if line[:2] != f"{current_num}.":
+            return False
+        current_num += 1
+    return True
+
 
 def text_to_textnode(text):
     start_node = TextNode(text,TextType.TEXT)
