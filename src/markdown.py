@@ -1,6 +1,66 @@
 from textnode import TextNode, TextType
+from htmlnode import HTMLNode,ParentNode, LeafNode, text_node_to_html_node
 from enum import Enum
 import re
+
+def extract_title(markdown):
+    lines = markdown.split("\n")
+
+    for line in lines:
+        if line != "" and line[0] == "#":
+            return line[1:].lstrip(" ")
+            
+    raise Exception("No header in markdown")
+            
+
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    child_nodes = []
+    for block in blocks:
+        block_type = block_to_blocktype(block)
+        tag = blocktype_to_tag(block_type,block)
+        if block_type == BlockType.PARAGRAPH:
+            block_node = ParentNode(tag,text_to_children(block.replace("\n"," ")))
+        elif block_type == BlockType.HEADING:
+            num_of_hashes = int(tag[1:])
+            cleaned_block = block[num_of_hashes:].strip()
+            block_node = ParentNode(tag,text_to_children(cleaned_block))
+        elif block_type == BlockType.QUOTE:
+            lines = block.split("\n")
+            new_lines = []
+            for line in lines:
+                new_lines.append(line.strip("> "))
+            cleaned_block = " ".join(new_lines)
+            block_node = ParentNode(tag,text_to_children(cleaned_block))
+        elif block_type == BlockType.UNORDERED_LIST:
+            list_items = block.split("\n")
+            list_children = []
+            for item in list_items:
+                list_children.append(ParentNode("li",text_to_children(item[2:])))
+            block_node = ParentNode(tag,list_children)
+        elif block_type == BlockType.ORDERED_LIST:
+            list_items = block.split("\n")
+            list_children = []
+            for item in list_items:
+                list_children.append(ParentNode("li",text_to_children(item.split(".",1)[1].lstrip())))
+            block_node = ParentNode(tag,list_children)
+        elif block_type == BlockType.CODE:
+            custom_text_node = TextNode(block.replace("\n","",1)[3:][:-3],TextType.CODE)
+            block_node = ParentNode(tag,[text_node_to_html_node(custom_text_node)])
+        else:
+            raise ValueError("Invalid Block Type!")
+        
+        child_nodes.append(block_node)
+    
+    return ParentNode("div",child_nodes)
+        
+        
+def text_to_children(text):
+    nodes = text_to_textnode(text)
+    new_nodes = []
+    for node in nodes:
+        new_nodes.append(text_node_to_html_node(node))
+    return new_nodes
 
 def markdown_to_blocks(markdown):
     blocks = []
@@ -21,13 +81,40 @@ class BlockType(Enum):
     UNORDERED_LIST = "unordered list"
     ORDERED_LIST = "ordered list"
 
+def blocktype_to_tag(block_type,block):
+    if block_type == BlockType.HEADING:
+        return header_to_tag(block)
+    elif block_type == BlockType.CODE:
+        return "pre"
+    elif block_type == BlockType.QUOTE:
+        return "blockquote"
+    elif block_type == BlockType.UNORDERED_LIST:
+        return "ul"
+    elif block_type == BlockType.ORDERED_LIST:
+        return "ol"
+    elif block_type == BlockType.PARAGRAPH:
+        return "p"
+
+def header_to_tag(header):
+    if header.startswith("######"):
+        return "h6"
+    elif header.startswith("#####"):
+        return "h5"
+    elif header.startswith("####"):
+        return "h4"
+    elif header.startswith("###"):
+        return "h3"
+    elif header.startswith("##"):
+        return "h2"
+    elif header.startswith("#"):
+        return "h1"
+    
 def block_to_blocktype(markdown):
     is_header = check_if_header(markdown)
     is_multi_code = check_if_multi_code(markdown)
     is_quote = markdown[:1] == ">"
     is_unordered_list = check_if_unordered_list(markdown)
     is_ordered_list = check_if_ordered_list(markdown)
-    is_paragraph = not (is_header or is_multi_code or is_quote or is_unordered_list or is_ordered_list)
     if is_header:
         return BlockType.HEADING
     elif is_multi_code:
@@ -176,7 +263,7 @@ def split_nodes_link(old_nodes):
                 new_nodes.append(TextNode(split_text[0],TextType.TEXT))
             new_nodes.append(TextNode(link[0],TextType.LINK,link[1]))
     
-    if split_text[1] != "":
-            new_nodes.append(TextNode(split_text[1],TextType.TEXT))
+        if split_text[1] != "":
+                new_nodes.append(TextNode(split_text[1],TextType.TEXT))
 
     return new_nodes
