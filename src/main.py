@@ -1,4 +1,5 @@
 from textnode import TextNode, TextType
+from pathlib import PurePath, Path
 from markdown import *
 import os
 import shutil
@@ -7,8 +8,19 @@ def main():
     copy_folder = "static/"
     paste_folder = "public/"
     copy_to(copy_folder,paste_folder)
-    generate_page("content/index.md","template.html","public/index.html")
+    generate_pages_recursive("content","template.html","public")
     print("done")
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    dir_contents = os.listdir(dir_path_content)
+
+    for item in dir_contents:
+        if os.path.isfile(os.path.join(dir_path_content,item)):
+            if PurePath(os.path.join(dir_path_content,item)).suffix==".md":
+                generate_page(os.path.join(dir_path_content,item),template_path,Path(os.path.join(dest_dir_path,item)).with_suffix(".html"))
+        elif os.path.isdir(os.path.join(dir_path_content,item)):
+            generate_pages_recursive(os.path.join(dir_path_content,item),template_path,os.path.join(dest_dir_path,item))
+
 
 def copy_to(copy_folder,paste_folder):
     clear_target_folder(paste_folder)
@@ -17,9 +29,9 @@ def copy_to(copy_folder,paste_folder):
     for item in copy_contents:
         if os.path.isdir(copy_folder+item):
             os.mkdir(paste_folder+item)
-            copy_to(copy_folder+item+"/",paste_folder+item+"/")
+            copy_to(os.path.join(copy_folder,item),os.path.join(paste_folder,item))
         else:
-            shutil.copy(copy_folder+item,paste_folder+item)
+            shutil.copy(os.path.join(copy_folder,item),os.path.join(paste_folder,item))
 
 def clear_target_folder(target):
     if os.path.exists(target):
